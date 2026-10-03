@@ -1,0 +1,101 @@
+from collections import deque
+
+
+def bfs(start, goal):
+    queue = deque([(start, [])])
+    visited = set()
+    visited.add(start)
+
+    while queue:
+        state, path = queue.popleft()
+
+        if state == goal:
+            return path + [state]
+
+        zero = state.index(0)
+        row, col = divmod(zero, 3)
+
+        moves = [
+            (-1, 0, "UP"),
+            (1, 0, "DOWN"),
+            (0, -1, "LEFT"),
+            (0, 1, "RIGHT")
+        ]
+
+        for dr, dc, direction in moves:
+            nr = row + dr
+            nc = col + dc
+
+            if 0 <= nr < 3 and 0 <= nc < 3:
+                new_zero = nr * 3 + nc
+                new_state = list(state)
+
+                new_state[zero], new_state[new_zero] = \
+                    new_state[new_zero], new_state[zero]
+
+                new_state = tuple(new_state)
+
+                if new_state not in visited:
+                    visited.add(new_state)
+                    queue.append(
+                        (new_state, path + [(new_state, direction)])
+                    )
+
+    return None
+
+
+def print_state(state):
+    print("-------------")
+    print("|", state[0], "|", state[1], "|", state[2], "|")
+    print("-------------")
+    print("|", state[3], "|", state[4], "|", state[5], "|")
+    print("-------------")
+    print("|", state[6], "|", state[7], "|", state[8], "|")
+    print("-------------")
+
+
+print("Enter initial state:")
+initial = list(map(int, input().split()))
+
+if len(initial) != 9 or set(initial) != set(range(9)):
+    print("Invalid input")
+    exit()
+
+start = tuple(initial)
+
+print("Enter goal state:")
+goal_input = list(map(int, input().split()))
+
+if len(goal_input) != 9 or set(goal_input) != set(range(9)):
+    print("Invalid input")
+    exit()
+
+goal = tuple(goal_input)
+
+print("\nInitial State:")
+print_state(start)
+
+print("\nGoal State:")
+print_state(goal)
+
+solution = bfs(start, goal)
+
+if solution:
+    print("\nOptimal solution found!")
+    print("Minimum number of moves:", len(solution) - 1)
+
+    print("\nOptimal positions:")
+
+    print("\nStep 0")
+    print_state(start)
+
+    for i, item in enumerate(solution):
+        if isinstance(item, tuple) and len(item) == 2:
+            state, direction = item
+
+            print("\nStep", i)
+            print("Move:", direction)
+            print_state(state)
+
+else:
+    print("\nNo solution found.")
