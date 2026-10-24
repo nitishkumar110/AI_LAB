@@ -1,0 +1,167 @@
+import heapq
+
+
+# Calculate Manhattan distance
+def manhattan_distance(state, goal):
+    distance = 0
+
+    for i in range(9):
+        if state[i] == 0:
+            continue
+
+        current_row, current_col = divmod(i, 3)
+        goal_index = goal.index(state[i])
+        goal_row, goal_col = divmod(goal_index, 3)
+
+        distance += abs(current_row - goal_row) + abs(current_col - goal_col)
+
+    return distance
+
+
+# Generate all possible next states
+def get_neighbors(state):
+    neighbors = []
+
+    zero_index = state.index(0)
+    row, col = divmod(zero_index, 3)
+
+    moves = [
+        (-1, 0, "UP"),
+        (1, 0, "DOWN"),
+        (0, -1, "LEFT"),
+        (0, 1, "RIGHT")
+    ]
+
+    for dr, dc, move in moves:
+        new_row = row + dr
+        new_col = col + dc
+
+        if 0 <= new_row < 3 and 0 <= new_col < 3:
+
+            new_index = new_row * 3 + new_col
+
+            new_state = list(state)
+            new_state[zero_index], new_state[new_index] = \
+                new_state[new_index], new_state[zero_index]
+
+            neighbors.append((tuple(new_state), move))
+
+    return neighbors
+
+
+# Print puzzle
+def print_puzzle(state):
+    for i in range(0, 9, 3):
+        print(state[i], state[i + 1], state[i + 2])
+
+
+# A* algorithm
+def a_star(start, goal):
+
+    h = manhattan_distance(start, goal)
+    g = 0
+    f = g + h
+
+    # Priority queue:
+    # (f, g, state, path)
+    priority_queue = []
+
+    heapq.heappush(
+        priority_queue,
+        (f, g, start, [])
+    )
+
+    visited = {}
+
+    while priority_queue:
+
+        f, g, current, path = heapq.heappop(priority_queue)
+
+        # If goal is reached
+        if current == goal:
+            return path + [(current, g, manhattan_distance(current, goal),
+                            f)]
+
+        # Avoid processing a state with a higher cost
+        if current in visited and visited[current] <= g:
+            continue
+
+        visited[current] = g
+
+        # Generate neighbors
+        for neighbor, move in get_neighbors(current):
+
+            new_g = g + 1
+            new_h = manhattan_distance(neighbor, goal)
+            new_f = new_g + new_h
+
+            new_path = path + [
+                (current, g, manhattan_distance(current, goal), f)
+            ]
+
+            heapq.heappush(
+                priority_queue,
+                (new_f, new_g, neighbor, new_path)
+            )
+
+    return None
+
+
+# -----------------------------
+# USER INPUT
+# -----------------------------
+
+print("A* Search using Manhattan Distance")
+print("----------------------------------")
+
+print("\nEnter the INITIAL state.")
+print("Use 0 for the blank space.")
+print("Example: 1 2 3 4 0 6 7 5 8")
+
+start = tuple(map(int, input("Initial state: ").split()))
+
+print("\nEnter the GOAL state.")
+print("Example: 1 2 3 4 5 6 7 8 0")
+
+goal = tuple(map(int, input("Goal state: ").split()))
+
+
+# Check input
+if len(start) != 9 or len(goal) != 9:
+    print("Error: Enter exactly 9 numbers.")
+    exit()
+
+if sorted(start) != sorted(goal):
+    print("Error: Initial and goal states must contain the same numbers.")
+    exit()
+
+
+# Run A*
+solution = a_star(start, goal)
+
+
+# Display solution
+if solution is None:
+
+    print("\nNo solution found.")
+
+else:
+
+    print("\n========== OPTIMAL SOLUTION ==========")
+
+    print("Number of moves:", len(solution) - 1)
+
+    print("\n")
+
+    for step, (state, g, h, f) in enumerate(solution):
+
+        print("Step", step)
+        print("Move:", "START" if step == 0 else "MOVE")
+
+        print_puzzle(state)
+
+        print("\ng =", g)
+        print("h =", h)
+        print("f = g + h =", f)
+
+        print("----------------------------------")
