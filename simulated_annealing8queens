@@ -1,0 +1,227 @@
+import random
+import math
+
+
+def calculate_cost(state):
+    """Calculate number of attacking queen pairs."""
+
+    cost = 0
+    n = len(state)
+
+    for i in range(n):
+        for j in range(i + 1, n):
+
+            # Same row
+            if state[i] == state[j]:
+                cost += 1
+
+            # Same diagonal
+            elif abs(state[i] - state[j]) == abs(i - j):
+                cost += 1
+
+    return cost
+
+
+def print_matrix(state):
+    """Display the state as an N x N matrix."""
+
+    n = len(state)
+
+    for row in range(n):
+
+        for col in range(n):
+
+            if state[row] == col:
+                print("Q", end=" ")
+            else:
+                print("0", end=" ")
+
+        print()
+
+
+def generate_neighbor(state):
+    """
+    Generate a neighbour by swapping
+    two queen positions.
+    """
+
+    neighbor = state.copy()
+
+    # Select two different positions
+    i, j = random.sample(range(len(state)), 2)
+
+    # Swap two queens
+    neighbor[i], neighbor[j] = neighbor[j], neighbor[i]
+
+    return neighbor, i, j
+
+
+def simulated_annealing(initial_state):
+
+    current = initial_state.copy()
+
+    current_cost = calculate_cost(current)
+
+    # Initial temperature
+    temperature = 100.0
+
+    # Cooling rate
+    cooling_rate = 0.95
+
+    # Minimum temperature
+    min_temperature = 0.01
+
+    # Store solution path
+    path = [current.copy()]
+
+    print("\n========================================")
+    print("          INITIAL STATE")
+    print("========================================")
+
+    print("State:", current)
+    print("Cost :", current_cost)
+
+    print("\nMatrix:")
+    print_matrix(current)
+
+    iteration = 0
+
+    while temperature > min_temperature and current_cost != 0:
+
+        iteration += 1
+
+        # Generate neighbour
+        neighbor, i, j = generate_neighbor(current)
+
+        neighbor_cost = calculate_cost(neighbor)
+
+        # Difference in cost
+        delta = neighbor_cost - current_cost
+
+        # Decide whether to accept
+        if delta <= 0:
+
+            probability = 1.0
+            accepted = True
+
+        else:
+
+            probability = math.exp(
+                -delta / temperature
+            )
+
+            random_value = random.random()
+
+            if random_value < probability:
+                accepted = True
+            else:
+                accepted = False
+
+        print("\n----------------------------------------")
+        print("Iteration:", iteration)
+        print("----------------------------------------")
+
+        print(
+            f"Swap (x{i}, x{j})"
+        )
+
+        print("Current State :", current)
+        print("Current Cost  :", current_cost)
+
+        print("Neighbour     :", neighbor)
+        print("Neighbour Cost:", neighbor_cost)
+
+        print("Temperature   :", round(temperature, 4))
+        print("Delta Cost    :", delta)
+
+        print(
+            "Acceptance Probability:",
+            round(probability, 4)
+        )
+
+        if accepted:
+
+            current = neighbor
+            current_cost = neighbor_cost
+
+            path.append(current.copy())
+
+            print("Move Accepted")
+
+            print("\nNew Matrix:")
+
+            print_matrix(current)
+
+        else:
+
+            print("Move Rejected")
+
+        # Cool down
+        temperature *= cooling_rate
+
+    # --------------------------------
+    # Display final result
+    # --------------------------------
+
+    print("\n\n========================================")
+    print("            SOLUTION PATH")
+    print("========================================")
+
+    for step, state in enumerate(path):
+
+        cost = calculate_cost(state)
+
+        print(f"\nStep {step}")
+        print("State:", state)
+        print("Cost :", cost)
+
+        print("Matrix:")
+
+        print_matrix(state)
+
+    print("\n========================================")
+    print("             FINAL RESULT")
+    print("========================================")
+
+    print("Final State:", current)
+    print("Final Cost :", current_cost)
+
+    if current_cost == 0:
+
+        print("Status: Solution Found")
+
+    else:
+
+        print("Status: Stopped before finding solution")
+
+
+# --------------------------------
+# Dynamic Input
+# --------------------------------
+
+n = int(input("Enter number of queens: "))
+
+if n != 8:
+
+    print("This program is designed for 8 queens.")
+
+else:
+
+    print("\nEnter 8 values representing queen positions.")
+    print("Example: 0 1 2 3 4 5 6 7")
+
+    initial_state = list(
+        map(int, input("Enter initial state: ").split())
+    )
+
+    if len(initial_state) != 8:
+
+        print("Error: Enter exactly 8 values.")
+
+    elif sorted(initial_state) != list(range(8)):
+
+        print("Error: Enter a permutation of 0 to 7.")
+
+    else:
+
+        simulated_annealing(initial_state)
