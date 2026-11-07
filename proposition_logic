@@ -1,0 +1,112 @@
+
+from itertools import product
+
+# Logical implication
+def implies(p, q):
+    return (not p) or q
+
+
+# Evaluate logical expression
+def evaluate(expression, model):
+    allowed = {
+        "__builtins__": {},
+        "implies": implies
+    }
+
+    return eval(expression, allowed, model)
+
+
+# Truth table enumeration
+def truth_table_entails(symbols, kb, query):
+
+    models = product([True, False], repeat=len(symbols))
+
+    print("\nTRUTH TABLE")
+    print("-" * 65)
+
+    print("\t".join(symbols + ["KB", "QUERY"]))
+    print("-" * 65)
+
+    kb_models = []
+    counterexamples = []
+
+    for values in models:
+
+        model = dict(zip(symbols, values))
+
+        kb_value = evaluate(kb, model)
+        query_value = evaluate(query, model)
+
+        print(
+            "\t".join(
+                ["T" if v else "F" for v in values]
+                + [
+                    "T" if kb_value else "F",
+                    "T" if query_value else "F"
+                ]
+            )
+        )
+
+        if kb_value:
+            kb_models.append(model.copy())
+
+            if not query_value:
+                counterexamples.append(model.copy())
+
+    print("-" * 65)
+
+    print("\nMODELS WHERE KB IS TRUE:")
+
+    if kb_models:
+        for model in kb_models:
+            print(model)
+    else:
+        print("No satisfying models. KB is inconsistent.")
+
+    print("\nENTAILMENT RESULT:")
+
+    if counterexamples:
+        print("NO! KB DOES NOT ENTAIL THE QUERY.")
+        print("\nCounterexample(s):")
+
+        for model in counterexamples:
+            print(model)
+
+    else:
+        print("YES! KB ENTAILS THE QUERY.")
+        print("Reason: No counterexample exists.")
+
+
+# Main program
+print("PROPOSITIONAL LOGIC - TRUTH TABLE ENUMERATION")
+
+try:
+    n = int(input("\nEnter number of propositional symbols: "))
+
+    if n <= 0:
+        raise ValueError("Number of symbols must be positive.")
+
+    symbols = input(
+        "Enter symbols separated by spaces (e.g. P Q R): "
+    ).split()
+
+    if len(symbols) != n or len(set(symbols)) != n:
+        raise ValueError("Enter exactly n unique symbols.")
+
+    if not all(s.isidentifier() for s in symbols):
+        raise ValueError("Invalid propositional symbols.")
+
+    print("\nOperators:")
+    print("and = AND")
+    print("or = OR")
+    print("not = NOT")
+    print("implies(P,Q) = P IMPLIES Q")
+    print("(P == Q) = BICONDITIONAL")
+
+    kb = input("\nEnter Knowledge Base (KB): ")
+    query = input("Enter Query: ")
+
+    truth_table_entails(symbols, kb, query)
+
+except Exception as e:
+    print("\nError:", e)
