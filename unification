@@ -1,0 +1,217 @@
+
+import re
+
+# Check variable (lowercase convention)
+def is_variable(term):
+    return isinstance(term, str) and term[0].islower()
+
+
+# Convert expression into tuple format
+def parse_expression(expression):
+    tokens = re.findall(
+        r'[A-Za-z_][A-Za-z_0-9]*|[(),]',
+        expression.replace(" ", "")
+    )
+
+    if ''.join(tokens) != expression.replace(" ", ""):
+        raise ValueError("Invalid expression")
+
+    pos = 0
+
+    def parse_term():
+        nonlocal pos
+
+        if pos >= len(tokens):
+            raise ValueError("Incomplete expression")
+
+        name = tokens[pos]
+        pos += 1
+
+        if pos < len(tokens) and tokens[pos] == '(':
+            pos += 1
+            args = []
+
+            while True:
+                args.append(parse_term())
+
+                if pos >= len(tokens):
+                    raise ValueError("Missing closing bracket")
+
+                if tokens[pos] == ')':
+                    pos += 1
+                    break
+
+                if tokens[pos] == ',':
+                    pos += 1
+                else:
+                    raise ValueError("Invalid argument separator")
+
+            return (name, *args)
+
+        return name
+
+    result = parse_term()
+
+    if pos != len(tokens):
+        raise ValueError("Unexpected extra input")
+
+    return result
+
+
+# Display expression
+def display(term):
+    if isinstance(term, tuple):
+        return term[0] + "(" + ", ".join(
+            display(x) for x in term[1:]
+        ) + ")"
+    return term
+
+
+# Apply substitutions
+def apply_substitution(term, subs):
+    if isinstance(term, str):
+        while term in subs:
+            term = subs[term]
+        return term
+
+    return tuple(
+        apply_substitution(x, subs) for x in term
+    )
+
+
+# Occurs check
+def occurs(var, term, subs):
+    term = apply_substitution(term, subs)
+
+    if var == term:
+        return True
+
+    if isinstance(term, tuple):
+        return any(occurs(var, x, subs) for x in term[1:])
+
+    return False
+
+
+# Store failure reason
+failure_reason = ""
+
+
+# Unification algorithm
+def unify(x, y, subs):
+
+    global failure_reason
+
+    x = apply_substitution(x, subs)
+    y = apply_substitution(y, subs)
+
+    # Same expressions
+    if x == y:
+        return True
+
+    # Variable substitution
+    if is_variable(x) or is_variable(y):
+
+        if is_variable(x):
+            var, term = x, y
+        else:
+            var, term = y, x
+
+        if occurs(var, term, subs):
+            failure_reason = (
+                f"Occurs check failed: {var} appears inside "
+                f"{display(term)}"
+            )
+            return False
+
+        subs[var] = term
+
+        print(f"Substitution applied: {var} = {display(term)}")
+        return True
+
+    # Compound expressions
+    if isinstance(x, tuple) and isinstance(y, tuple):
+
+        if x[0] != y[0]:
+            failure_reason = (
+                f"Predicate/function mismatch: {x[0]} != {y[0]}"
+            )
+            return False
+
+        if len(x) != len(y):
+            failure_reason = (
+                f"Argument count mismatch in {x[0]}: "
+                f"{len(x)-1} != {len(y)-1}"
+            )
+            return False
+
+        for i, (a, b) in enumerate(zip(x[1:], y[1:]), 1):
+
+            print(f"\nComparing argument {i}: {display(a)} and {display(b)}")
+
+            if not unify(a, b, subs):
+                return False
+
+        return True
+
+    # Different constants
+    failure_reason = (
+        f"Constant mismatch: {display(x)} != {display(y)}"
+    )
+    return False
+
+
+# Main program
+print("FIRST ORDER LOGIC - UNIFICATION")
+print("-" * 45)
+
+try:
+    e1 = input("Enter first expression: ")
+    e2 = input("Enter second expression: ")
+
+    exp1 = parse_expression(e1)
+    exp2 = parse_expression(e2)
+
+    print("\nCONVERTED EXPRESSIONS")
+    print("E1 =", display(exp1))
+    print("E2 =", display(exp2))
+
+    print("\nUNIFICATION PROCESS")
+
+    substitution = {}
+    failure_reason = ""
+
+    result = unify(exp1, exp2, substitution)
+
+    print("\n" + "-" * 45)
+
+    if result:
+        print("UNIFICATION SUCCESSFUL!")
+        print("\nJUSTIFICATION:")
+        print("Both expressions can be made identical.")
+
+        print("\nMOST GENERAL UNIFIER (MGU):")
+
+        if substitution:
+            for var in substitution:
+                value = apply_substitution(
+                    substitution[var], substitution
+                )
+                print(f"{var} = {display(value)}")
+
+        else:
+            print("No substitution required ({}).")
+
+        print("\nFINAL EXPRESSIONS:")
+        print("E1 =", display(apply_substitution(exp1, substitution)))
+        print("E2 =", display(apply_substitution(exp2, substitution)))
+
+    else:
+        print("UNIFICATION UNSUCCESSFUL!")
+
+        print("\nJUSTIFICATION:")
+        print(failure_reason)
+
+    print("-" * 45)
+
+except ValueError as error:
+    print("Invalid Input:", error)
