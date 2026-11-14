@@ -1,0 +1,274 @@
+
+# FOL FORWARD CHAINING
+# Week-8 AI Lab
+
+def forward_chaining(KB, rules, query, negative_facts, case_name):
+
+    facts = set(KB)
+
+    print("\n" + "=" * 55)
+    print(case_name)
+    print("=" * 55)
+
+    print("\nINITIAL KNOWLEDGE BASE:")
+
+    for fact in sorted(facts):
+        print(" ", fact)
+
+    print("\nNEGATIVE FACTS:")
+
+    for fact in sorted(negative_facts):
+        print(" NOT", fact)
+
+    iteration = 1
+
+    # Forward Chaining
+    while True:
+
+        new = set()
+
+        print("\nITERATION", iteration)
+
+        for name, premises, conclusion in rules:
+
+            substitutions = [{}]
+
+            # Match all rule premises with available facts
+            for predicate, arguments in premises:
+
+                updated = []
+
+                for substitution in substitutions:
+
+                    for fact in facts:
+
+                        if fact[0] != predicate:
+                            continue
+
+                        if len(fact[1]) != len(arguments):
+                            continue
+
+                        match = substitution.copy()
+                        valid = True
+
+                        for p, f in zip(arguments, fact[1]):
+
+                            if p.startswith("?"):
+
+                                if p in match and match[p] != f:
+                                    valid = False
+                                    break
+
+                                match[p] = f
+
+                            elif p != f:
+                                valid = False
+                                break
+
+                        if valid:
+                            updated.append(match)
+
+                substitutions = updated
+
+            # Generate new facts
+            for substitution in substitutions:
+
+                result = (
+                    conclusion[0],
+                    tuple(
+                        substitution.get(x, x)
+                        for x in conclusion[1]
+                    )
+                )
+
+                if result not in facts and result not in new:
+
+                    if result not in negative_facts:
+
+                        print("\nApplying Rule:", name)
+                        print("Substitution:", substitution)
+                        print("New Fact:", result)
+
+                        new.add(result)
+
+        # Stop if no new facts are generated
+        if not new:
+
+            print("\nNo new facts generated.")
+            break
+
+        facts.update(new)
+        iteration += 1
+
+    # Display final knowledge base
+    print("\nFINAL KNOWLEDGE BASE:")
+
+    for fact in sorted(facts):
+        print(" ", fact)
+
+    # Query verification
+    print("\nQUERY:", query)
+
+    if query in facts:
+
+        print("\nRESULT: QUERY PROVED")
+
+        print("\nFINAL CONCLUSION:")
+        print(
+            "Robert is a criminal because he is an American, "
+            "the item sold is a weapon, he sold the weapon "
+            "to Country A, and Country A is hostile to America. "
+            "All conditions of the criminality rule are satisfied."
+        )
+
+    else:
+
+        print("\nRESULT: QUERY NOT PROVED")
+
+        if ("Sells", ("Robert", "M1", "A")) in negative_facts:
+
+            print("\nFINAL CONCLUSION:")
+            print(
+                "Robert's criminality is not established because "
+                "the knowledge base states that Robert did not "
+                "sell the weapon to Country A. Therefore, the "
+                "selling condition required by the criminality "
+                "rule is not satisfied."
+            )
+
+        elif ("Hostile", ("A",)) in negative_facts:
+
+            print("\nFINAL CONCLUSION:")
+            print(
+                "Robert's criminality is not established because "
+                "Country A is explicitly stated to be non-hostile. "
+                "Therefore, the hostile-nation condition required "
+                "by the criminality rule is not satisfied."
+            )
+
+        else:
+
+            print("\nFINAL CONCLUSION:")
+            print(
+                "The available facts and rules are insufficient "
+                "to establish Robert's criminality."
+            )
+
+
+# -----------------------------------------
+# ORIGINAL RULES
+# -----------------------------------------
+
+rules = [
+
+    # Rule 1: American selling weapons to hostile nations
+    ("R1",
+     [
+         ("American", ("?x",)),
+         ("Weapon", ("?y",)),
+         ("Sells", ("?x", "?y", "?z")),
+         ("Hostile", ("?z",))
+     ],
+     ("Criminal", ("?x",))),
+
+    # Rule 2: Enemy of America is hostile
+    ("R2",
+     [("Enemy", ("?x", "America"))],
+     ("Hostile", ("?x",))),
+
+    # Rule 3: All missiles are weapons
+    ("R3",
+     [("Missile", ("?x",))],
+     ("Weapon", ("?x",))),
+
+    # Rule 4: Robert sold missiles to Country A
+    ("R4",
+     [("Missile", ("?x",))],
+     ("Sells", ("Robert", "?x", "A")))
+]
+
+
+query = ("Criminal", ("Robert",))
+
+
+# =========================================
+# CASE 1: ROBERT IS A CRIMINAL
+# =========================================
+
+KB1 = {
+
+    ("American", ("Robert",)),
+    ("Enemy", ("A", "America")),
+    ("Missile", ("M1",))
+}
+
+negative1 = set()
+
+forward_chaining(
+    KB1,
+    rules,
+    query,
+    negative1,
+    "CASE 1: ROBERT IS A CRIMINAL"
+)
+
+
+# =========================================
+# CASE 2: ROBERT DID NOT SELL THE WEAPON
+# =========================================
+
+KB2 = {
+
+    ("American", ("Robert",)),
+    ("Enemy", ("A", "America")),
+    ("Missile", ("M1",))
+}
+
+# Remove the rule deriving the sale
+rules2 = [
+    rule for rule in rules
+    if rule[0] != "R4"
+]
+
+negative2 = {
+
+    ("Sells", ("Robert", "M1", "A"))
+}
+
+forward_chaining(
+    KB2,
+    rules2,
+    query,
+    negative2,
+    "CASE 2: ROBERT DID NOT SELL THE WEAPON"
+)
+
+
+# =========================================
+# CASE 3: COUNTRY A IS NOT HOSTILE
+# =========================================
+
+KB3 = {
+
+    ("American", ("Robert",)),
+    ("Missile", ("M1",))
+}
+
+# Remove the rule deriving hostility
+rules3 = [
+    rule for rule in rules
+    if rule[0] != "R2"
+]
+
+negative3 = {
+
+    ("Hostile", ("A",))
+}
+
+forward_chaining(
+    KB3,
+    rules3,
+    query,
+    negative3,
+    "CASE 3: COUNTRY A IS NOT HOSTILE"
+)
